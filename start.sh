@@ -118,7 +118,7 @@ cat > config.json << EOF
     "tls": {
         "enabled": ${TLS:-false}
     },
-    "verbose": 0,
+    "verbose": 3,
     "pause-on-battery": false,
     "pause-on-active": false,
     "randomx": {
@@ -149,4 +149,5 @@ echo " Threads: ${THREADS}"
 echo " RAM:     $(( ${TOTAL_MEM_KB:-0} / 1024 )) MB"
 echo "============================================"
 
+echo "[INFO] Starting CCX Miner..."
 exec "${CMD[@]}"
