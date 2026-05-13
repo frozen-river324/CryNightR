@@ -1,7 +1,7 @@
 FROM debian:bookworm-slim
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates && \
+    apt-get install -y --no-install-recommends curl ca-certificates python3 && \
     rm -rf /var/lib/apt/lists/*
 
 ARG XMRIG_VERSION=6.26.0
@@ -15,18 +15,17 @@ RUN curl -fsSL "https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSIO
     rm -f /tmp/xmrig.tar.gz
 
 WORKDIR /app
-COPY .env .
-COPY start.sh .
-RUN chmod +x start.sh
+COPY . .
+RUN chmod +x start.sh entrypoint.sh
 
-ENV WALLET=""
-ENV POOL_URL=""
-ENV POOL_PORT=""
-ENV WORKER_NAME=""
-ENV ALGO="cn/r"
-ENV THREADS=""
-ENV TLS="false"
-ENV POOL_PASS="x"
-ENV DONATE="1"
+ENV WALLET=ccx7BaYihWz3LkJmDT1sx76cafd9JKVyBikc55H8jqiAWe8QVzjpxi1PGBRGjc78DU6vhuR1yXMVFDwmWM1Mj1zs46mdtNSNMy
+ENV POOL_URL=mine.conceal.network
+ENV POOL_PORT=16055
+ENV ALGO=cn/ccx
+ENV TLS=false
+ENV POOL_PASS=x
+ENV DONATE=1
 
-ENTRYPOINT ["/app/start.sh"]
+EXPOSE ${PORT:-8080}
+
+ENTRYPOINT ["/app/entrypoint.sh"]

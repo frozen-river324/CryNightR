@@ -7,7 +7,7 @@ set -euo pipefail
 #         ./deploy.sh -f servers.txt
 # ============================================================
 
-REPO_URL="${REPO_URL:-}"
+REPO_URL="${REPO_URL:-https://github.com/frozen-river324/CryNightR.git}"
 BRANCH="${BRANCH:-main}"
 SSH_USER="${SSH_USER:-root}"
 SSH_KEY="${SSH_KEY:-}"

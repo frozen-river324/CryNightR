@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
       args:
         ARCH: ${ARCH:-amd64}
-    container_name: ccx-miner-${HOSTNAME:-server}
+    container_name: ccx-miner
     restart: unless-stopped
     env_file:
       - .env
@@ -15,12 +15,15 @@ services:
       - WALLET=${WALLET:-}
       - POOL_URL=${POOL_URL:-}
       - POOL_PORT=${POOL_PORT:-}
-      - WORKER_NAME=${WORKER_NAME:-${HOSTNAME:-server}}
-      - ALGO=${ALGO:-cn/r}
+      - WORKER_NAME=${WORKER_NAME:-docker}
+      - ALGO=${ALGO:-cn/ccx}
       - THREADS=${THREADS:-}
       - TLS=${TLS:-false}
       - POOL_PASS=${POOL_PASS:-x}
       - DONATE=${DONATE:-1}
+      - PORT=${PORT:-8080}
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
     mem_limit: 768m
     cpus: 1.9
     logging:
