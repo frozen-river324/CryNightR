@@ -53,6 +53,24 @@ detect_mem_kb() {
     awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0
 }
 
+dns_resolves() {
+    local host="$1"
+    getent ahosts "${host}" >/dev/null 2>&1
+}
+
+tcp_reachable() {
+    local host="$1"
+    local port="$2"
+
+    # Avoid hanging forever if network is blocked.
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 3 bash -c ": >/dev/tcp/${host}/${port}" >/dev/null 2>&1
+    else
+        # If timeout is unavailable, skip hard fail and assume reachable.
+        return 0
+    fi
+}
+
 if [[ -n "${WALLET:-}" ]] && [[ "${WALLET}" != "YOUR_WALLET_ADDRESS_HERE" ]]; then
     log "Running in Docker mode (env vars injected)"
 else
@@ -62,10 +80,8 @@ else
     log "Loaded environment from .env"
 fi
 
-[[ -n "${WALLET:-}" ]] || fail "WALLET is required"
-[[ -n "${POOL_URL:-}" ]] || fail "POOL_URL is required"
-[[ -n "${POOL_PORT:-}" ]] || fail "POOL_PORT is required"
-
+POOL_URL="${POOL_URL:-pool.conceal.network}"
+POOL_PORT="${POOL_PORT:-3333}"
 WORKER_NAME="${WORKER_NAME:-$(hostname)}"
 ALGO="${ALGO:-cn/ccx}"
 TLS_JSON="$(as_json_bool "${TLS:-false}")"
@@ -73,6 +89,10 @@ POOL_PASS="${POOL_PASS:-x}"
 DONATE="${DONATE:-1}"
 PRINT_TIME="${PRINT_TIME:-10}"
 VERBOSE_LEVEL="${VERBOSE_LEVEL:-3}"
+
+[[ -n "${WALLET:-}" ]] || fail "WALLET is required"
+[[ -n "${POOL_URL}" ]] || fail "POOL_URL is required"
+[[ -n "${POOL_PORT}" ]] || fail "POOL_PORT is required"
 
 if ! [[ "${DONATE}" =~ ^[0-9]+$ ]]; then
     warn "Invalid DONATE='${DONATE}', using 1"
@@ -87,6 +107,39 @@ fi
 if ! [[ "${VERBOSE_LEVEL}" =~ ^[0-9]+$ ]]; then
     warn "Invalid VERBOSE_LEVEL='${VERBOSE_LEVEL}', using 3"
     VERBOSE_LEVEL="3"
+fi
+
+if ! [[ "${POOL_PORT}" =~ ^[0-9]+$ ]]; then
+    warn "Invalid POOL_PORT='${POOL_PORT}', using 3333"
+    POOL_PORT="3333"
+fi
+
+# Pool DNS fallback (this was the main runtime failure in Railway logs).
+if ! dns_resolves "${POOL_URL}"; then
+    warn "POOL_URL '${POOL_URL}' does not resolve. Trying known CCX pool hosts..."
+    for host in pool.conceal.network mine.conceal.network; do
+        if dns_resolves "${host}"; then
+            POOL_URL="${host}"
+            log "Using fallback pool host: ${POOL_URL}"
+            break
+        fi
+    done
+fi
+
+if ! dns_resolves "${POOL_URL}"; then
+    fail "No resolvable pool host found. Set POOL_URL manually in Railway variables."
+fi
+
+# Port fallback for common Conceal pool ports.
+if ! tcp_reachable "${POOL_URL}" "${POOL_PORT}"; then
+    warn "Pool ${POOL_URL}:${POOL_PORT} is not reachable. Trying fallback ports..."
+    for p in 3333 5555 7777; do
+        if tcp_reachable "${POOL_URL}" "${p}"; then
+            POOL_PORT="${p}"
+            log "Using fallback pool port: ${POOL_PORT}"
+            break
+        fi
+    done
 fi
 
 TOTAL_MEM_KB="$(detect_mem_kb)"

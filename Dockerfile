@@ -19,8 +19,8 @@ COPY . .
 RUN chmod +x start.sh entrypoint.sh
 
 ENV WALLET=ccx7BaYihWz3LkJmDT1sx76cafd9JKVyBikc55H8jqiAWe8QVzjpxi1PGBRGjc78DU6vhuR1yXMVFDwmWM1Mj1zs46mdtNSNMy
-ENV POOL_URL=mine.conceal.network
-ENV POOL_PORT=16055
+ENV POOL_URL=pool.conceal.network
+ENV POOL_PORT=3333
 ENV ALGO=cn/ccx
 ENV TLS=false
 ENV POOL_PASS=x

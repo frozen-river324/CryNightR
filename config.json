@@ -8,7 +8,7 @@
         "safe-curls": true
     },
     "av": 0,
-    "background": true,
+    "background": false,
     "colors": false,
     "cpu-affinity": null,
     "cpu-priority": 1,
@@ -22,7 +22,7 @@
         {
             "algo": "cn/ccx",
             "coin": "ccx",
-            "url": "mine.conceal.network:16055",
+            "url": "pool.conceal.network:3333",
             "user": "ccx7BaYihWz3LkJmDT1sx76cafd9JKVyBikc55H8jqiAWe8QVzjpxi1PGBRGjc78DU6vhuR1yXMVFDwmWM1Mj1zs46mdtNSNMy",
             "pass": "x",
             "keepalive": true,
@@ -39,7 +39,7 @@
     "tls": {
         "enabled": false
     },
-    "verbose": 0,
+    "verbose": 3,
     "pause-on-battery": false,
     "pause-on-active": false,
     "randomx": {
