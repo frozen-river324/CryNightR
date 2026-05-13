@@ -75,27 +75,68 @@ else
     echo "[OK] XMRig installed."
 fi
 
-# --- Build command ---
-TLS_FLAG=""
-[[ "$TLS" == "true" ]] && TLS_FLAG="--tls"
+# --- Build config.json ---
+cat > config.json << EOF
+{
+    "api": {
+        "id": null,
+        "worker-id": null,
+        "level": 1,
+        "no-notes": false,
+        "restricted": false,
+        "safe-curls": true
+    },
+    "av": 0,
+    "background": true,
+    "colors": false,
+    "cpu-affinity": null,
+    "cpu-priority": 1,
+    "donate-level": ${DONATE:-1},
+    "ignore-bad-packages": false,
+    "large-pages-num": 0,
+    "log-file": null,
+    "no-color": true,
+    "no-conf": false,
+    "pools": [
+        {
+            "algo": "${ALGO:-cn/ccx}",
+            "coin": "ccx",
+            "url": "${POOL_URL:-mine.conceal.network}:${POOL_PORT:-16055}",
+            "user": "${WALLET}",
+            "pass": "${POOL_PASS:-x}",
+            "keepalive": true,
+            "nicehash": false,
+            "variant": -1,
+            "enabled": true,
+            "tls": ${TLS:-false}
+        }
+    ],
+    "rebinds": 0,
+    "resume-retries": 10,
+    "resume-retry-pause": 5,
+    "syslog": false,
+    "tls": {
+        "enabled": ${TLS:-false}
+    },
+    "verbose": 0,
+    "pause-on-battery": false,
+    "pause-on-active": false,
+    "randomx": {
+        "init": -1,
+        "numa": true,
+        "mode": "auto",
+        "1gb-pages": false,
+        "rdmsr": true
+    }
+}
+EOF
 
+# --- Build command ---
 CMD=(
     "$XMRIG_BIN"
-    "--url" "stratum+://${POOL_URL}:${POOL_PORT}"
-    "--user" "$WALLET"
-    "--pass" "$POOL_PASS"
-    "--algo" "$ALGO"
+    "--config" "config.json"
     "--threads" "$THREADS"
     "--user-agent" "CCX-${WORKER_NAME}"
-    "--donate-level" "$DONATE"
-    "--priority" 1
-    "--background"
-    "--verbose" 0
-    "--large-pages-num" 0
-    "--rebinds" 0
-    "--resume-retries" 10
-    "--resume-retry-pause" 5
-    "$TLS_FLAG"
 )
 
 echo "============================================"
