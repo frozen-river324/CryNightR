@@ -1,82 +1,121 @@
 #!/bin/bash
-set -euo pipefail
-
-# ============================================================
-#  XMRig Miner — start.sh
-#  Optimized for low-resource servers: 2vCPU, 1GB RAM
-#  Works in bare-metal and Docker modes
-# ============================================================
+set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/.env"
+CONFIG_PATH="${SCRIPT_DIR}/config.json"
 
-# --- Docker mode: env vars are injected directly ---
-# --- Bare-metal mode: source .env ---
-if [[ ! -z "${WALLET:-}" && "$WALLET" != "YOUR_WALLET_ADDRESS_HERE" ]]; then
-    echo "[INFO] Running in Docker mode (env vars injected)"
-else
-    CONFIG_FILE="${SCRIPT_DIR}/.env"
-    if [[ ! -f "$CONFIG_FILE" ]]; then
-        echo "[ERROR] .env not found. Copy .env.example to .env and fill it in."
-        exit 1
-    fi
-    source "$CONFIG_FILE"
-fi
+log() {
+    echo "[INFO] $*"
+}
 
-# --- Validation ---
-if [[ -z "${WALLET:-}" || "$WALLET" == "YOUR_WALLET_ADDRESS_HERE" ]]; then
-    echo "[ERROR] Set WALLET in .env or as env var"
+warn() {
+    echo "[WARN] $*"
+}
+
+fail() {
+    echo "[ERROR] $*" >&2
     exit 1
-fi
+}
 
-if [[ -z "${POOL_URL:-}" || -z "${POOL_PORT:-}" ]]; then
-    echo "[ERROR] Set POOL_URL and POOL_PORT in .env or as env vars"
-    exit 1
-fi
+as_json_bool() {
+    case "${1,,}" in
+        true|1|yes|on) echo "true" ;;
+        *) echo "false" ;;
+    esac
+}
 
-# --- Defaults ---
-: "${WORKER_NAME:=$(hostname)}"
-: "${ALGO:=cn/r}"
-: "${TLS:=false}"
-: "${POOL_PASS:=x}"
-: "${DONATE:=1}"
-
-# --- Auto-detect threads ---
-if [[ -z "${THREADS:-}" ]]; then
-    THREADS="$(nproc 2>/dev/null || echo 2)"
-fi
-
-# Cap threads for small servers
-if [[ -f /proc/meminfo ]]; then
-    TOTAL_MEM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-    if (( TOTAL_MEM_KB < 2097152 )); then
-        echo "[INFO] Low-RAM server (${TOTAL_MEM_KB}KB). Capping threads to 2."
-        (( THREADS > 2 )) && THREADS=2
+detect_cpus() {
+    # cgroup v2
+    if [[ -f "/sys/fs/cgroup/cpu.max" ]]; then
+        read -r quota period < "/sys/fs/cgroup/cpu.max"
+        if [[ "${quota}" != "max" ]] && [[ "${quota}" =~ ^[0-9]+$ ]] && [[ "${period}" =~ ^[0-9]+$ ]] && (( period > 0 )); then
+            echo $(( (quota + period - 1) / period ))
+            return
+        fi
     fi
+
+    # cgroup v1
+    if [[ -f "/sys/fs/cgroup/cpu/cpu.cfs_quota_us" ]] && [[ -f "/sys/fs/cgroup/cpu/cpu.cfs_period_us" ]]; then
+        local quota period
+        quota="$(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us)"
+        period="$(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us)"
+        if [[ "${quota}" =~ ^[0-9]+$ ]] && [[ "${period}" =~ ^[0-9]+$ ]] && (( quota > 0 )) && (( period > 0 )); then
+            echo $(( (quota + period - 1) / period ))
+            return
+        fi
+    fi
+
+    nproc 2>/dev/null || echo 1
+}
+
+detect_mem_kb() {
+    awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0
+}
+
+if [[ -n "${WALLET:-}" ]] && [[ "${WALLET}" != "YOUR_WALLET_ADDRESS_HERE" ]]; then
+    log "Running in Docker mode (env vars injected)"
 else
-    TOTAL_MEM_KB="unknown"
+    [[ -f "${ENV_FILE}" ]] || fail ".env not found at ${ENV_FILE}"
+    # shellcheck source=/dev/null
+    source "${ENV_FILE}"
+    log "Loaded environment from .env"
 fi
 
-# --- Find XMRig binary ---
+[[ -n "${WALLET:-}" ]] || fail "WALLET is required"
+[[ -n "${POOL_URL:-}" ]] || fail "POOL_URL is required"
+[[ -n "${POOL_PORT:-}" ]] || fail "POOL_PORT is required"
+
+WORKER_NAME="${WORKER_NAME:-$(hostname)}"
+ALGO="${ALGO:-cn/ccx}"
+TLS_JSON="$(as_json_bool "${TLS:-false}")"
+POOL_PASS="${POOL_PASS:-x}"
+DONATE="${DONATE:-1}"
+PRINT_TIME="${PRINT_TIME:-10}"
+VERBOSE_LEVEL="${VERBOSE_LEVEL:-3}"
+
+if ! [[ "${DONATE}" =~ ^[0-9]+$ ]]; then
+    warn "Invalid DONATE='${DONATE}', using 1"
+    DONATE="1"
+fi
+
+if ! [[ "${PRINT_TIME}" =~ ^[0-9]+$ ]]; then
+    warn "Invalid PRINT_TIME='${PRINT_TIME}', using 10"
+    PRINT_TIME="10"
+fi
+
+if ! [[ "${VERBOSE_LEVEL}" =~ ^[0-9]+$ ]]; then
+    warn "Invalid VERBOSE_LEVEL='${VERBOSE_LEVEL}', using 3"
+    VERBOSE_LEVEL="3"
+fi
+
+TOTAL_MEM_KB="$(detect_mem_kb)"
+CPU_COUNT="$(detect_cpus)"
+THREADS="${THREADS:-${CPU_COUNT}}"
+
+if ! [[ "${THREADS}" =~ ^[0-9]+$ ]]; then
+    warn "Invalid THREADS='${THREADS}', using CPU count=${CPU_COUNT}"
+    THREADS="${CPU_COUNT}"
+fi
+
+# Conservative caps for small containers
+if (( TOTAL_MEM_KB > 0 )) && (( TOTAL_MEM_KB < 2097152 )) && (( THREADS > 2 )); then
+    THREADS=2
+elif (( TOTAL_MEM_KB >= 2097152 )) && (( TOTAL_MEM_KB < 4194304 )) && (( THREADS > 4 )); then
+    THREADS=4
+fi
+
+(( THREADS >= 1 )) || THREADS=1
+
 if [[ -x "/opt/xmrig/xmrig" ]]; then
     XMRIG_BIN="/opt/xmrig/xmrig"
 elif [[ -x "${SCRIPT_DIR}/xmrig/xmrig" ]]; then
     XMRIG_BIN="${SCRIPT_DIR}/xmrig/xmrig"
 else
-    echo "[INFO] XMRig binary not found. Downloading v6.26.0..."
-    mkdir -p "${SCRIPT_DIR}/xmrig"
-    ARCH=$(dpkg --print-architecture 2>/dev/null || uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-    RELEASE="xmrig-6.26.0-linux-${ARCH}.tar.gz"
-    DOWNLOAD_URL="https://github.com/xmrig/xmrig/releases/download/v6.26.0/${RELEASE}"
-    curl -fsSL "$DOWNLOAD_URL" -o "/tmp/${RELEASE}"
-    tar -xzf "/tmp/${RELEASE}" -C "${SCRIPT_DIR}/xmrig/" --strip-components=1
-    chmod +x "${SCRIPT_DIR}/xmrig/xmrig"
-    rm -f "/tmp/${RELEASE}"
-    XMRIG_BIN="${SCRIPT_DIR}/xmrig/xmrig"
-    echo "[OK] XMRig installed."
+    fail "XMRig binary not found. Expected /opt/xmrig/xmrig"
 fi
 
-# --- Build config.json ---
-cat > config.json << EOF
+cat > "${CONFIG_PATH}" << EOF
 {
     "api": {
         "id": null,
@@ -87,16 +126,16 @@ cat > config.json << EOF
         "safe-curls": true
     },
     "http": {
-        "enabled": true,
+        "enabled": false,
         "host": "127.0.0.1",
-        "port": 8081
+        "port": 0
     },
     "av": 0,
-    "background": true,
+    "background": false,
     "colors": false,
     "cpu-affinity": null,
     "cpu-priority": 1,
-    "donate-level": ${DONATE:-1},
+    "donate-level": ${DONATE},
     "ignore-bad-packages": false,
     "large-pages-num": 0,
     "log-file": null,
@@ -104,16 +143,16 @@ cat > config.json << EOF
     "no-conf": false,
     "pools": [
         {
-            "algo": "${ALGO:-cn/ccx}",
+            "algo": "${ALGO}",
             "coin": "ccx",
-            "url": "${POOL_URL:-mine.conceal.network}:${POOL_PORT:-16055}",
+            "url": "${POOL_URL}:${POOL_PORT}",
             "user": "${WALLET}",
-            "pass": "${POOL_PASS:-x}",
+            "pass": "${POOL_PASS}",
             "keepalive": true,
             "nicehash": false,
             "variant": -1,
             "enabled": true,
-            "tls": ${TLS:-false}
+            "tls": ${TLS_JSON}
         }
     ],
     "rebinds": 0,
@@ -121,9 +160,9 @@ cat > config.json << EOF
     "resume-retry-pause": 5,
     "syslog": false,
     "tls": {
-        "enabled": ${TLS:-false}
+        "enabled": ${TLS_JSON}
     },
-    "verbose": 3,
+    "verbose": ${VERBOSE_LEVEL},
     "pause-on-battery": false,
     "pause-on-active": false,
     "randomx": {
@@ -136,24 +175,30 @@ cat > config.json << EOF
 }
 EOF
 
-# --- Build command ---
+WALLET_MASKED="${WALLET}"
+if (( ${#WALLET} > 18 )); then
+    WALLET_MASKED="${WALLET:0:10}...${WALLET: -8}"
+fi
+
+echo "============================================"
+echo " Miner:      XMRig $(basename "${XMRIG_BIN}")"
+echo " Coin:       CCX (${ALGO})"
+echo " Pool:       ${POOL_URL}:${POOL_PORT}"
+echo " Wallet:     ${WALLET_MASKED}"
+echo " Worker:     ${WORKER_NAME}"
+echo " CPUs seen:  ${CPU_COUNT}"
+echo " Threads:    ${THREADS}"
+echo " RAM:        $(( TOTAL_MEM_KB / 1024 )) MB"
+echo " Print time: ${PRINT_TIME}s"
+echo "============================================"
+
 CMD=(
-    "$XMRIG_BIN"
-    "--config" "config.json"
-    "--threads" "$THREADS"
+    "${XMRIG_BIN}"
+    "--config" "${CONFIG_PATH}"
+    "--threads" "${THREADS}"
     "--user-agent" "CCX-${WORKER_NAME}"
-    "--print-time" 10
+    "--print-time" "${PRINT_TIME}"
 )
 
-echo "============================================"
-echo " Miner:   XMRig $(basename "$XMRIG_BIN")"
-echo " Coin:    CCX (${ALGO})"
-echo " Pool:    ${POOL_URL}:${POOL_PORT}"
-echo " Wallet:  ${WALLET}"
-echo " Worker:  ${WORKER_NAME}"
-echo " Threads: ${THREADS}"
-echo " RAM:     $(( ${TOTAL_MEM_KB:-0} / 1024 )) MB"
-echo "============================================"
-
-echo "[INFO] Starting CCX Miner..."
+log "Starting CCX Miner in foreground"
 exec "${CMD[@]}"
