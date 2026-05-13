@@ -99,6 +99,11 @@ if ! [[ "${DONATE}" =~ ^[0-9]+$ ]]; then
     DONATE="1"
 fi
 
+if (( DONATE < 1 )); then
+    warn "Official XMRig binaries do not allow donate-level below 1%. Using 1%."
+    DONATE="1"
+fi
+
 if ! [[ "${PRINT_TIME}" =~ ^[0-9]+$ ]]; then
     warn "Invalid PRINT_TIME='${PRINT_TIME}', using 10"
     PRINT_TIME="10"
