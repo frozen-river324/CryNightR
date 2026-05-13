@@ -88,6 +88,7 @@ TLS_JSON="$(as_json_bool "${TLS:-false}")"
 POOL_PASS="${POOL_PASS:-x}"
 DONATE="${DONATE:-1}"
 PRINT_TIME="${PRINT_TIME:-10}"
+HEALTH_PRINT_TIME="${HEALTH_PRINT_TIME:-60}"
 VERBOSE_LEVEL="${VERBOSE_LEVEL:-3}"
 
 [[ -n "${WALLET:-}" ]] || fail "WALLET is required"
@@ -107,6 +108,11 @@ fi
 if ! [[ "${PRINT_TIME}" =~ ^[0-9]+$ ]]; then
     warn "Invalid PRINT_TIME='${PRINT_TIME}', using 10"
     PRINT_TIME="10"
+fi
+
+if ! [[ "${HEALTH_PRINT_TIME}" =~ ^[0-9]+$ ]]; then
+    warn "Invalid HEALTH_PRINT_TIME='${HEALTH_PRINT_TIME}', using 60"
+    HEALTH_PRINT_TIME="60"
 fi
 
 if ! [[ "${VERBOSE_LEVEL}" =~ ^[0-9]+$ ]]; then
@@ -248,6 +254,7 @@ echo " CPUs seen:  ${CPU_COUNT}"
 echo " Threads:    ${THREADS}"
 echo " RAM:        $(( TOTAL_MEM_KB / 1024 )) MB"
 echo " Print time: ${PRINT_TIME}s"
+echo " Health:     ${HEALTH_PRINT_TIME}s"
 echo "============================================"
 
 CMD=(
@@ -256,6 +263,7 @@ CMD=(
     "--threads" "${THREADS}"
     "--user-agent" "CCX-${WORKER_NAME}"
     "--print-time" "${PRINT_TIME}"
+    "--health-print-time" "${HEALTH_PRINT_TIME}"
 )
 
 log "Starting CCX Miner in foreground"
