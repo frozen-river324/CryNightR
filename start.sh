@@ -86,6 +86,11 @@ cat > config.json << EOF
         "restricted": false,
         "safe-curls": true
     },
+    "http": {
+        "enabled": true,
+        "host": "127.0.0.1",
+        "port": 8081
+    },
     "av": 0,
     "background": true,
     "colors": false,
@@ -150,4 +155,20 @@ echo " RAM:     $(( ${TOTAL_MEM_KB:-0} / 1024 )) MB"
 echo "============================================"
 
 echo "[INFO] Starting CCX Miner..."
-exec "${CMD[@]}"
+"${CMD[@]}" &
+MINER_PID=$!
+
+# Monitor miner stats every 10 seconds
+while kill -0 $MINER_PID 2>/dev/null; do
+    sleep 10
+    STATS=$(curl -s http://127.0.0.1:8081/1/summary 2>/dev/null)
+    if [[ -n "$STATS" ]]; then
+        HASHRATE=$(echo "$STATS" | python3 -c "import sys, json; data=json.load(sys.stdin); print(f\"Hashrate: {data.get('hashrate', {}).get('total', [0])[0]} H/s\")" 2>/dev/null || echo "Hashrate: unknown")
+        CONNECTIONS=$(echo "$STATS" | python3 -c "import sys, json; data=json.load(sys.stdin); print(f\"Connections: {len(data.get('connection', {}))}\")" 2>/dev/null || echo "Connections: unknown")
+        echo "[STATS] $HASHRATE | $CONNECTIONS"
+    else
+        echo "[STATS] Miner API not ready yet"
+    fi
+done
+
+wait $MINER_PID
