@@ -5,7 +5,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 ARG XMRIG_VERSION=6.26.0
-ARG ARCH=amd64
+ARG ARCH=static-x64
 
 RUN curl -fsSL "https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-linux-${ARCH}.tar.gz" \
     -o /tmp/xmrig.tar.gz && \
