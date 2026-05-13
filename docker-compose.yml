@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  ccx-miner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ARCH: ${ARCH:-amd64}
+    container_name: ccx-miner-${HOSTNAME:-server}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - WALLET=${WALLET:-}
+      - POOL_URL=${POOL_URL:-}
+      - POOL_PORT=${POOL_PORT:-}
+      - WORKER_NAME=${WORKER_NAME:-${HOSTNAME:-server}}
+      - ALGO=${ALGO:-cn/r}
+      - THREADS=${THREADS:-}
+      - TLS=${TLS:-false}
+      - POOL_PASS=${POOL_PASS:-x}
+      - DONATE=${DONATE:-1}
+    mem_limit: 768m
+    cpus: 1.9
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "3"

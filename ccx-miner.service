@@ -1,0 +1,30 @@
+[Unit]
+Description=CCX CryptoNightR Miner (XMRig)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ccx-miner
+ExecStart=/opt/ccx-miner/start.sh
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# Resource limits for small servers
+MemoryMax=768M
+CPUQuota=190%
+Nice=10
+IOSchedulingClass=idle
+LimitNOFILE=65536
+
+# Security
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/ccx-miner
+
+[Install]
+WantedBy=multi-user.target
