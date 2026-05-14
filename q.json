@@ -1,1 +1,1 @@
-{"query":"mutation { addGitHubPlugin(input: { projectId: \"c69b3202-cb6d-4c60-ad8e-941cbf7384a0\", environmentId: \"76ea5f35-dbfc-4a34-9a3b-e11c2247fdba\", repo: \"frozen-river324/CryNightR\", branch: \"main\" }) { id name } }"}
+{"query":"query { service(id: \"f92eb145-336d-4d20-a2bf-b60fc18b05ec\") { id name deployments { edges { node { id status } } } } }"}

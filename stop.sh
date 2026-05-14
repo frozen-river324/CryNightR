@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stop the CCX miner
+# Stop the Monero miner
 
 if pidof xmrig >/dev/null 2>&1; then
     echo "Stopping XMRig..."

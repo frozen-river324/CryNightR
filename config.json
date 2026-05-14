@@ -7,27 +7,28 @@
         "restricted": false,
         "safe-curls": true
     },
-    "av": 0,
+    "http": {
+        "enabled": false,
+        "host": "127.0.0.1",
+        "port": 0
+    },
     "background": false,
     "colors": false,
     "cpu-affinity": null,
     "cpu-priority": 1,
     "donate-level": 1,
-    "ignore-bad-packages": false,
-    "large-pages-num": 0,
     "log-file": null,
     "no-color": true,
     "no-conf": false,
     "pools": [
         {
-            "algo": "cn/ccx",
-            "coin": "ccx",
-            "url": "pool.conceal.network:3333",
-            "user": "ccx7BaYihWz3LkJmDT1sx76cafd9JKVyBikc55H8jqiAWe8QVzjpxi1PGBRGjc78DU6vhuR1yXMVFDwmWM1Mj1zs46mdtNSNMy",
+            "algo": "rx/0",
+            "coin": "monero",
+            "url": "93.157.244.212:3333",
+            "user": "4AL6QjWtF4RCyPzPT7Ew3khPuqhmcJC9BQe9Cpxvv3noevJyp23YLTySZpHzWZyb1EEcGd8FRurTpWjcQmdJJgxzUYSFyBC",
             "pass": "x",
             "keepalive": true,
             "nicehash": false,
-            "variant": -1,
             "enabled": true,
             "tls": false
         }
@@ -39,18 +40,18 @@
     "tls": {
         "enabled": false
     },
-    "verbose": 3,
+    "verbose": 2,
     "pause-on-battery": false,
     "pause-on-active": false,
     "randomx": {
         "init": -1,
         "numa": true,
-        "mode": "auto",
+        "mode": "light",
         "1gb-pages": false,
-        "rdmsr": true,
-        "wrmsr": true,
-        "cache-quit": 1,
-        "soft-brown": true,
-        "threads": 2
+        "rdmsr": true
+    },
+    "cpu": {
+        "enabled": true,
+        "max-threads-hint": 100
     }
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Check miner status
 
-echo "=== CCX Miner Status ==="
+echo "=== Monero Miner Status ==="
 
 if pidof xmrig >/dev/null 2>&1; then
     PID=$(pidof xmrig | awk '{print $1}')

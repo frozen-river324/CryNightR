@@ -1,13 +1,13 @@
 version: "3.8"
 
 services:
-  ccx-miner:
+  monero-miner:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         ARCH: ${ARCH:-amd64}
-    container_name: ccx-miner
+    container_name: monero-miner
     restart: unless-stopped
     env_file:
       - .env
@@ -16,11 +16,15 @@ services:
       - POOL_URL=${POOL_URL:-}
       - POOL_PORT=${POOL_PORT:-}
       - WORKER_NAME=${WORKER_NAME:-docker}
-      - ALGO=${ALGO:-cn/ccx}
+      - ALGO=${ALGO:-rx/0}
+      - COIN=${COIN:-monero}
       - THREADS=${THREADS:-}
       - TLS=${TLS:-false}
       - POOL_PASS=${POOL_PASS:-x}
       - DONATE=${DONATE:-1}
+      - LIGHT_MODE=${LIGHT_MODE:-true}
+      - ADAPTIVE_THREADS=${ADAPTIVE_THREADS:-false}
+      - RAMP_INTERVAL_SEC=${RAMP_INTERVAL_SEC:-60}
       - PORT=${PORT:-8080}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
